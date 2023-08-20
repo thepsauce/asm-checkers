@@ -122,16 +122,15 @@ get_moves:
 	inc	rdi
 	mov	[rdi], bh
 	inc	rdi
+	; TODO: Fill these two bytes with meaningful data (flag and middle square if needed)
 	mov	[rdi], byte 0
 	inc	rdi
 	mov	[rdi], byte 0
 	inc	rdi
-
 .invalid_move:
 	inc	r10
 	dec	r11
 	jnz	.loop_offsets
-
 .continue:
 	inc	rsi
 	ret
@@ -209,8 +208,10 @@ play_move:
 	mov	dl, ch
 	movzx	r8, dl
 	mov	[grid + r8], byte 0
+	mov	rax, 0
+	ret
 .continue:
 	cmp	rsi, rax
-	jne .loop
-
+	jne	.loop
+	mov	rax, 1
 	ret
