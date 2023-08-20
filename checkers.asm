@@ -6,6 +6,8 @@ extern moves
 extern nMoves
 
 section .data
+	global grid
+	global turn
 	grid: times 32 db 0
 	turn: db 0
 
@@ -46,7 +48,9 @@ _start:
 
 .game_loop:
 ; TODO: Print grid
-	call	get_all_moves
+	mov	rsi, 8
+	mov	rdi, moves
+	call	get_moves
 	cmp	[nMoves], byte 0
 	je	.game_over
 ; TODO: Get user input

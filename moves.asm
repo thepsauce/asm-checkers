@@ -1,10 +1,11 @@
 ; Declared in checkers.asm
-extern moves
-extern nMoves
+extern grid
+extern turn
 
 section .data
-	grid: times 100 db 0
-	turn: db 0
+	global moves
+	global extraMoves
+	global nMoves
 	; 0 - source
 	; 1 - destination
 	; 2 - flags
@@ -44,26 +45,26 @@ get_moves:
 	and	r9, 0x7
 	; al (piece) = grid[rsi]
 	mov	al, [grid + rsi]
-	; Check if it's the piece's turn
+; Check if it's the piece's turn
 	test	al, [turn]
 	jz	.continue
-	; Get the right range of offsets
-	; r10 - Address of offsets
-	; r11 - Number of offsets
+; Get the right range of offsets
+; r10 - Address of offsets
+; r11 - Number of offsets
 	mov	r10, offsets
 	mov	r11, 4
 	add	r10, 4
-	; If we have an odd row, we use the second offset list
+; If we have an odd row, we use the second offset list
 	mov	r12, r8
 	and	r12, 0x1
 	shl	r12, 3
 	add	r10, r12
-	; If the piece is a queen, we use 8 offsets
+; If the piece is a queen, we use 8 offsets
 	movzx	r12, al
 	and	r12, 0x4
 	setnz	bl
 	add	r11, r12
-	; If the piece is black or a queen, we use negative offsets
+; If the piece is black or a queen, we use negative offsets
 	mov	ah, al
 	and	ah, 0x2
 	shl	ah, 1
@@ -71,6 +72,7 @@ get_moves:
 	movzx	r12, bl
 	shl	r12, 2
 	sub	r10, r12
+; Check all offsets for a valid move
 .loop_offsets:
 	; ah (difference) = [r10] (offset)
 	mov	dl, [r10]
@@ -80,24 +82,31 @@ get_moves:
 	; bh (destination) = bl (source) + ah (difference)
 	mov	bh, bl
 	add	bh, ah
-	; Check if the destination is out of bounds
+; Check if the destination is out of bounds
 	cmp	bh, 0
 	jl	.invalid_move
 	cmp	bh, 32
 	jge	.invalid_move
-	; Check if the source and destination are diagonal to each other
+; Check if the source and destination are diagonal to each other
+	push	rbx
 	shl	bl, 1
 	shl	bh, 1
 	mov	cl, bl
-	mov	ch, bl
 	mov	dl, bh
+	mov	ch, bl
 	mov	dh, bh
-	shr	bl, 1
-	shr	bh, 1
+	shr	ch, 3
+	test	ch, 1
+	setz	bl
+	shr	dh, 3
+	test	dh, 1
+	setz	bh
 	and	cl, 0x7
-	shr	ch, 3
+	add	cl, bl
 	and	dl, 0x7
-	shr	ch, 3
+	add	dl, bh
+	pop	rbx
+
 	sub	cl, dl
 	jnl	.not_negate_cl
 	neg	cl
@@ -109,15 +118,15 @@ get_moves:
 	sub	cl, ch
 	jnz	.invalid_move
 
-	mov	[rdi], bh
-	inc	rdi
 	mov	[rdi], bl
 	inc	rdi
-	mov	[rdi], byte 0
+	mov	[rdi], bh
 	inc	rdi
 	mov	[rdi], byte 0
 	inc	rdi
-	
+	mov	[rdi], byte 0
+	inc	rdi
+
 .invalid_move:
 	inc	r10
 	dec	r11
@@ -138,7 +147,7 @@ get_moves:
 ;
 get_all_moves:
 	mov	rsi, 0		; current index
-	mov	rdi, 0		; current move index
+	mov	rdi, moves	; move destination pointer
 .loop:
 	call get_moves
 
@@ -146,9 +155,10 @@ get_all_moves:
 	jne	.loop
 
 	mov	rbx, rdi
-	shl	rbx, 14
+	sub	rbx, moves
+	shl	rbx, 14		; 14 = 16 - 2
 	mov	[nMoves], bx
-	
+
 	ret
 
 ;
@@ -157,7 +167,7 @@ get_all_moves:
 ; Input:
 ;	al - Source of the piece
 ;	bl - Destination of the piece
-; 
+;
 ; Output:
 ;	rax - 0 if the piece was moved, 1 otherwise
 ;
@@ -202,5 +212,5 @@ play_move:
 .continue:
 	cmp	rsi, rax
 	jne .loop
-	
+
 	ret
