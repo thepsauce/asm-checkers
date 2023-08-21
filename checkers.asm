@@ -50,7 +50,7 @@ _start:
 ; TODO: Print grid
 	mov	rsi, 8
 	mov	rdi, moves
-	call	get_moves
+	call	get_all_moves
 	cmp	[nMoves], byte 0
 	je	.game_over
 ; TODO: Get user input
