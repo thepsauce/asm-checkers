@@ -13,7 +13,7 @@ section .data
 	moves: times 48 dq 0
 	extraMoves: times 12 dq 0
 	nMoves: dw 0
-
+	
 section .rodata
 	offsets:
 		db -9, -7, -4, -3, 4, 5, 7, 9
@@ -51,6 +51,7 @@ get_moves:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;range;
 ; Get the right range of offsets ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; r10 - Address of offsets
 ; r11 - Number of offsets
 	mov	r10, offsets
@@ -81,6 +82,7 @@ get_moves:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;offset;
 ; Check all offsets for a valid move ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 .loop_offsets:
 
 ; ah (difference) = [r10] (offset)
@@ -108,6 +110,7 @@ get_moves:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;diagonal;
 ; Check if the source and destination are diagonal to each other ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; cl - source column
 ; ch - source row
 ; dl - destination column
@@ -183,6 +186,7 @@ get_moves:
 .double_move:
 ;;;;;;;;;;;;;;middle;
 ; Get middle square ;
+;;;;;;;;;;;;;;;;;;;;;
 
 ; Restore the lower c and d registers
 	shr	rcx, 16
@@ -203,10 +207,10 @@ get_moves:
 	and	bl, 0x3
 	xor	bl, 0x3
 	jz	.is_middle_valid
-	
+
 	sub	rdi, 2
 	jmp	.next_offset
-	
+
 .is_middle_valid:
 	mov	[rdi], byte 1
 	inc	rdi
@@ -262,49 +266,58 @@ get_all_moves:
 ;	rax - 0 if the piece was moved, 1 otherwise
 ;
 play_move:
-	mov	rsi, 0
-	mov	rax, 0
-	mov	ax, [nMoves]
+	mov	rsi, grid
+	mov	r8w, [nMoves]
 
 .loop:
-	; ah = source
+; ah = source
 	mov	ah, [rsi]
 	inc	rsi
-	; bh = destination
+
+; bh = destination
 	mov	bh, [rsi]
 	inc	rsi
-	; ch = flags
+
+; ch = flags
 	mov	ch, [rsi]
 	inc	rsi
-	; dh = extra
+
+; dh = extra
 	mov	dh, [rsi]
 	inc	rsi
-	; Check if the given move is contained
+
+; Check if the given move is contained
 	cmp	ah, al
 	sete	cl
 	cmp	bh, bl
 	sete	ch
 	and	cl, ch
 	jz	.continue
-	; Move the piece
+
+; Move the piece
 	movzx	r8, al
 	movzx	r9, bl
 	add	r8, grid
 	mov	dl, [r8]
 	mov	[grid + r9], dl
 	mov	[r8], byte 0
-	; Check for double move
+
+; Check for double move
 	test	cl, 1
 	jz	.continue
-	; Clear middle piece
+
+; Clear middle piece
 	mov	dl, ch
 	movzx	r8, dl
 	mov	[grid + r8], byte 0
+
 	mov	rax, 0
 	ret
+
 .continue:
-	cmp	rsi, rax
+	dec	r8w
 	jne	.loop
+
 	mov	rax, 1
 	ret
 ; }}}
