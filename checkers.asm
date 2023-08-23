@@ -1,4 +1,4 @@
-; Declared in moves.asm 
+; Declared in moves.asm
 extern get_moves
 extern get_all_moves
 extern play_move
@@ -56,18 +56,19 @@ _start:
 	mov	[grid + 29], byte 2
 	mov	[grid + 30], byte 2
 	mov	[grid + 31], byte 2
+
 ;;;;;;;;;;;;setup;
 
 .game_loop:
 	call	pretty_refresh
 
-	mov	rsi, 8
-	mov	rdi, moves
 	call	get_all_moves
 	cmp	[nMoves], byte 0
 	je	.game_over
 
 	call	read_move
+	cmp	rax, rbx
+	je	.game_loop
 
 	call	play_move
 

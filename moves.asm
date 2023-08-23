@@ -2,6 +2,9 @@
 extern grid
 extern turn
 
+; Declared in command.asm
+extern command_swap_turn
+
 section .data
 	global moves
 	global extraMoves
@@ -18,6 +21,8 @@ section .rodata
 	offsets:
 		db -9, -7, -4, -3, 4, 5, 7, 9
 		db -9, -7, -5, -4, 3, 4, 7, 9
+	invalidMoveText: db "invalid move!", 10
+	nInvalidMoveText: equ $ - invalidMoveText
 
 section .text
 	global get_moves
@@ -230,9 +235,8 @@ get_moves:
 ; }}}
 
 ; get_all_moves() {{{
-; Gets all possible moves of all pieces on the board whose turn it is.
 ;
-; No input.
+; Gets all possible moves of all pieces on the board whose turn it is.
 ;
 ; Output:
 ;	moves - all moves
@@ -241,6 +245,7 @@ get_moves:
 get_all_moves:
 	mov	rsi, 0		; current index
 	mov	rdi, moves	; move destination pointer
+
 .loop:
 	call get_moves
 
@@ -262,11 +267,8 @@ get_all_moves:
 ;	al - Source of the piece
 ;	bl - Destination of the piece
 ;
-; Output:
-;	rax - 0 if the piece was moved, 1 otherwise
-;
 play_move:
-	mov	rsi, grid
+	mov	rsi, moves
 	mov	r8w, [nMoves]
 
 .loop:
@@ -288,36 +290,46 @@ play_move:
 
 ; Check if the given move is contained
 	cmp	ah, al
-	sete	cl
+	sete	dl
 	cmp	bh, bl
-	sete	ch
-	and	cl, ch
+	sete	dh
+	and	dl, dh
 	jz	.continue
 
 ; Move the piece
-	movzx	r8, al
-	movzx	r9, bl
-	add	r8, grid
-	mov	dl, [r8]
-	mov	[grid + r9], dl
-	mov	[r8], byte 0
+	movzx	r9, al
+	movzx	r10, bl
+	add	r9, grid
+	mov	dl, [r9]
+	mov	[grid + r10], dl
+	mov	[r9], byte 0
 
-; Check for double move
-	test	cl, 1
-	jz	.continue
+; Test flags for double move flag
+	test	ch, 1
+	jz	.succ_move
 
 ; Clear middle piece
-	mov	dl, ch
+	mov	dl, dh
 	movzx	r8, dl
-	mov	[grid + r8], byte 0
+	mov	[grid + r9], byte 0
 
-	mov	rax, 0
-	ret
+; Swap turn
+	mov	al, [turn]
+	xor	al, 0x3
+	mov	[turn], al
+	
+.succ_move:
+	jmp	command_swap_turn
 
 .continue:
 	dec	r8w
-	jne	.loop
+	jnz	.loop
 
 	mov	rax, 1
+	mov	rdi, 1
+	mov	rsi, invalidMoveText
+	mov	rdx, nInvalidMoveText
+	syscall
+
 	ret
 ; }}}

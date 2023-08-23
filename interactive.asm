@@ -38,7 +38,7 @@ section .rodata
 		dw 112, 120, 128, 136,
 		dw 188, 196, 204, 212,
 		dw 256, 264, 272, 280,
-		dw 336, 344, 352, 360,
+		dw 332, 340, 348, 356
 		dw 400, 408, 416, 424,
 		dw 476, 484, 492, 500,
 		dw 544, 552, 560, 568
@@ -57,24 +57,28 @@ pretty_refresh:
 	xor	rcx, rcx
 
 .loop_grid:
+	movzx	rbx, word [prettyOffsets + rcx * 2]
+	add	rbx, pretty
+
 	mov	al, [grid + rcx]
 	cmp	al, 0
 	je	.no_piece
 
-	movzx	rbx, word [prettyOffsets + rcx * 2]
-
-; Test for white piece bit
-	test	al, 0x1
-	jz	.black_piece
+	test	al, 1
+	jne	.black_piece
 
 .white_piece:
-	mov	byte [pretty + rbx], 'o'
-	jmp	.no_piece
+	mov	[rbx], byte 'o'
+	jmp	.after_piece
 
 .black_piece:
-	mov	byte [pretty + rbx], '*'
+	mov	[rbx], byte '*'
+	jmp	.after_piece
 
 .no_piece:
+	mov	[rbx], byte ' '
+
+.after_piece:
 	inc	rcx
 	cmp	rcx, 32
 	jne	.loop_grid
@@ -149,6 +153,7 @@ read_move:
 	mov	rcx, r8
 	sub	rcx, buffer
 	mov	rdi, buffer
+
 .loop_blank:
 ; Go back all the way if the buffer is blank
 	cmp	rcx, 0
@@ -202,6 +207,8 @@ read_move:
 	jmp	.loop_number1
 
 .end_number1:
+	; 1-based to 0-based
+	dec	rax
 
 .loop_number2:
 	mov	dl, [rdi]
@@ -229,6 +236,8 @@ read_move:
 	jmp	.loop_number2
 
 .end_number2:
+	; 1-based to 0-based
+	dec	rbx
 
 ;;;;;;;;;;;;;;;;;;;;;buffer;
 	ret
